@@ -1,0 +1,34 @@
+@startuml
+skinparam participantBackgroundColor #E6E6FA
+skinparam participantBorderColor #000000
+skinparam participantFontColor #000000
+
+actor Пользователь
+participant "Клиентская игра" as Game
+participant "Игровой сервер" as Server
+participant "Платежный шлюз" as PaymentGateway
+participant "База данных" as DB
+
+Пользователь -> Game: Инициировать покупку \nвнутренней валюты
+Game -> Server: Запрос на покупку \nвнутренней валюты \n(WebSocket)
+Server -> DB: Созранить запрос\nпокупки в базе данных
+DB -> Server: Подтверждение сохранения \nзапроса
+alt Достаточно средств на счете
+   Server -> PaymentGateway: Инициировать оплату \n(через REST API)
+   PaymentGateway -> Server: Подтверждение успешной оплаты
+   Server -> DB: Обновить баланс внутренней \nвалюты пользователя
+   DB -> Server: Подтверждение \nобновления данных
+   Server -> Game: Подтверждение успешной \nпокупки внутренней \nвалюты (WebSocket)
+   Game -> Пользователь: Подтверждение покупки \nвнутренней валюты
+   note right of Пользователь: Пользователь получает уведомление \nо успешной покупки.
+else Недостаточно средств на счете
+    PaymentGateway -x Server: Уведомление о \nнедостатке средств
+    Server -> Game: Уведомление о \nнедостатке средств \n(WebSocket)
+    Game -> Пользователь: Уведомление о \nнедостатке средств
+    note right of Пользователь
+    Недостаточно средств для покупки валюты.
+    end note
+end
+
+
+@enduml
